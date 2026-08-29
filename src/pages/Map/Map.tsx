@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'react-leaflet-fullscreen/styles.css';
 import 'leaflet.marker.slideto';
 import 'leaflet-rotatedmarker';
-import { Divider, Drawer, Image, Paper, Table, Text, useComputedColorScheme } from '@mantine/core';
+import { Divider, Drawer, Group, Image, Paper, Table, Text, useComputedColorScheme } from '@mantine/core';
 import axios from 'axios';
 import { notifications } from '@mantine/notifications';
 import { IconX } from '@tabler/icons-react';
@@ -21,6 +21,9 @@ import 'leaflet.fullscreen/dist/Control.FullScreen.css';
 import { FullscreenControl } from "react-leaflet-fullscreen";
 import Arrow from './Arrow';
 import Video from './Video';
+import CasevacExportMenu from '@/components/CasevacExportMenu';
+import CasevacHlzPanel from '@/components/CasevacHlzPanel';
+import { type CasevacExportData } from '@/casevacExport';
 
 export default function Map() {
     const [markers, setMarkers] = useState<{ [uid: string]: L.Marker }>({});
@@ -32,6 +35,7 @@ export default function Map() {
     const [drawerTitle, setDrawerTitle] = useState('');
     const [detailRows, setDetailRows] = useState<ReactElement[]>([]);
     const [positionRows, setPositionRows] = useState<ReactElement[]>([]);
+    const [selectedCasevac, setSelectedCasevac] = useState<CasevacExportData | null>(null);
     const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
 
     const eudsLayer = new L.LayerGroup();
@@ -186,6 +190,7 @@ export default function Map() {
         if (Object.hasOwn(markers, uid)) {
             markers[uid].setIcon(icon);
             markers[uid].on('click', (e) => {
+                setSelectedCasevac(null);
                 setDrawerTitle(eud.callsign);
                 formatDrawer(eud, null);
                 open();
@@ -199,6 +204,7 @@ export default function Map() {
             if (eud.last_point !== null) marker.setLatLng([eud.last_point.latitude, eud.last_point.longitude]);
 
             marker.on('click', (e) => {
+                setSelectedCasevac(null);
                 setDrawerTitle(eud.callsign);
                 formatDrawer(eud, null);
                 open();
@@ -257,7 +263,13 @@ export default function Map() {
 
             function onCaseEvac(value: any) {
                 const { uid } = value;
-                const marker = L.marker([value.point.latitude, value.point.longitude]);
+                setSelectedCasevac((current) => current?.uid === uid ? value : current);
+                let marker = L.marker([value.point.latitude, value.point.longitude]);
+                if (Object.hasOwn(markers, uid)) {
+                    marker = markers[uid];
+                    marker.off('click');
+                }
+
                 marker.bindTooltip(value.title, {
                     opacity: 0.7,
                     permanent: true,
@@ -266,6 +278,7 @@ export default function Map() {
                 });
 
                 marker.on('click', (e) => {
+                    setSelectedCasevac(value);
                     setDrawerTitle(value.title);
                     formatDrawer(value, null);
                     open();
@@ -281,7 +294,7 @@ export default function Map() {
 
                 if (Object.hasOwn(markers, uid)) {
                     // @ts-expect-error trust me bro
-                    markers[uid].slideTo([value.point.latitude, value.point.longitude],
+                    marker.slideTo([value.point.latitude, value.point.longitude],
                         { duration: 2000, keepAtCenter: false });
                 } else {
                     marker.addTo(markersLayer);
@@ -323,6 +336,7 @@ export default function Map() {
                             direction: 'bottom',
                         });
                         circle.on('click', (e) => {
+                            setSelectedCasevac(null);
                             setDrawerTitle(value.callsign);
                             formatDrawer(value, null);
                             open();
@@ -344,6 +358,7 @@ export default function Map() {
                     });
 
                     marker.on('click', (e) => {
+                        setSelectedCasevac(null);
                         setDrawerTitle(value.callsign);
                         formatDrawer(value, null);
                         open();
@@ -461,11 +476,22 @@ export default function Map() {
               radius="md"
               position="right"
               opened={opened}
-              onClose={close}
+              onClose={() => {
+                  setSelectedCasevac(null);
+                  close();
+              }}
               title={drawerTitle}
               overlayProps={{ backgroundOpacity: 0 }}
               shadow="xl"
             >
+                {selectedCasevac && (
+                    <>
+                        <CasevacHlzPanel casevac={selectedCasevac} />
+                        <Group justify="flex-end" my="md">
+                            <CasevacExportMenu casevac={selectedCasevac} />
+                        </Group>
+                    </>
+                )}
                 <Divider label="Details" labelPosition="left" color={computedColorScheme === 'light' ? 'black' : 'gray.4'} />
                 <Table>
                     {detailRows}
