@@ -1,6 +1,6 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement, useEffect, useRef, useState } from 'react';
 import { renderToString } from 'react-dom/server';
-import { LayersControl, MapContainer, ScaleControl, TileLayer, useMap, WMSTileLayer } from 'react-leaflet';
+import { LayerGroup, LayersControl, MapContainer, ScaleControl, TileLayer, useMap, WMSTileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import 'react-leaflet-fullscreen/styles.css';
@@ -24,6 +24,7 @@ import Video from './Video';
 import CasevacExportMenu from '@/components/CasevacExportMenu';
 import CasevacHlzPanel from '@/components/CasevacHlzPanel';
 import { type CasevacExportData } from '@/casevacExport';
+import { buildCasevacHlzOverlay } from '@/casevacHlzOverlay';
 
 export default function Map() {
     const [markers, setMarkers] = useState<{ [uid: string]: L.Marker }>({});
@@ -36,12 +37,62 @@ export default function Map() {
     const [detailRows, setDetailRows] = useState<ReactElement[]>([]);
     const [positionRows, setPositionRows] = useState<ReactElement[]>([]);
     const [selectedCasevac, setSelectedCasevac] = useState<CasevacExportData | null>(null);
+    const hlzLayer = useRef<L.LayerGroup | null>(null);
+    const hlzOverlays = useRef<Record<string, L.CircleMarker>>({});
     const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
 
     const eudsLayer = new L.LayerGroup();
     const rbLinesLayer = new L.LayerGroup();
     const markersLayer = new L.LayerGroup();
     const fovsLayer = new L.LayerGroup();
+
+    function openCasevacDrawer(casevac: CasevacExportData) {
+        setSelectedCasevac(casevac);
+        setDrawerTitle(casevac.title);
+        formatDrawer(casevac, null);
+        open();
+    }
+
+    function syncCasevacHlzOverlay(casevac: CasevacExportData) {
+        const hlz = buildCasevacHlzOverlay(casevac);
+        if (!hlz && Object.hasOwn(hlzOverlays.current, casevac.uid)) {
+            hlzLayer.current?.removeLayer(hlzOverlays.current[casevac.uid]);
+            delete hlzOverlays.current[casevac.uid];
+        } else if (hlz && hlzLayer.current) {
+            let hlzOverlay = hlzOverlays.current[casevac.uid];
+            if (hlzOverlay) {
+                hlzOverlay.off('click');
+                hlzOverlay.setLatLng(hlz.position);
+                hlzOverlay.setStyle({
+                    color: hlz.color,
+                    fillColor: hlz.color,
+                    dashArray: hlz.dashArray,
+                });
+                hlzOverlay.unbindTooltip();
+            } else {
+                hlzOverlay = L.circleMarker(hlz.position, {
+                    radius: 20,
+                    color: hlz.color,
+                    fillColor: hlz.color,
+                    fillOpacity: 0.14,
+                    opacity: 0.95,
+                    weight: 3,
+                    dashArray: hlz.dashArray,
+                }).addTo(hlzLayer.current);
+                hlzOverlays.current[casevac.uid] = hlzOverlay;
+            }
+
+            const tooltip = document.createElement('span');
+            tooltip.textContent = `${hlz.label} — ${hlz.statusMessage}`;
+            hlzOverlay.bindTooltip(tooltip, {
+                direction: 'right',
+                offset: [22, 0],
+                opacity: 0.9,
+                permanent: true,
+            });
+            hlzOverlay.on('click', () => openCasevacDrawer(casevac));
+        }
+    }
 
     function formatDrawer(eud:any, point:any) {
         const detail_rows:ReactElement[] = [];
@@ -264,6 +315,7 @@ export default function Map() {
             function onCaseEvac(value: any) {
                 const { uid } = value;
                 setSelectedCasevac((current) => current?.uid === uid ? value : current);
+                syncCasevacHlzOverlay(value);
                 let marker = L.marker([value.point.latitude, value.point.longitude]);
                 if (Object.hasOwn(markers, uid)) {
                     marker = markers[uid];
@@ -278,10 +330,7 @@ export default function Map() {
                 });
 
                 marker.on('click', (e) => {
-                    setSelectedCasevac(value);
-                    setDrawerTitle(value.title);
-                    formatDrawer(value, null);
-                    open();
+                    openCasevacDrawer(value);
                 });
 
                 marker.setIcon(L.icon({
@@ -559,6 +608,9 @@ export default function Map() {
                         </LayersControl.Overlay>
                         <LayersControl.Overlay name="Google Terrain Overlay">
                             <TileLayer url="http://mt1.google.com/vt/lyrs=t&amp;x={x}&amp;y={y}&amp;z={z}" pane="overlayPane" />
+                        </LayersControl.Overlay>
+                        <LayersControl.Overlay name="CASEVAC HLZ" checked>
+                            <LayerGroup ref={hlzLayer} />
                         </LayersControl.Overlay>
                     </LayersControl>
                     <FullscreenControl />
