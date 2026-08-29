@@ -21,6 +21,7 @@ import 'leaflet.fullscreen/dist/Control.FullScreen.css';
 import { FullscreenControl } from "react-leaflet-fullscreen";
 import Arrow from './Arrow';
 import Video from './Video';
+import CasevacDeleteButton from '@/components/CasevacDeleteButton';
 import CasevacExportMenu from '@/components/CasevacExportMenu';
 import CasevacHlzPanel from '@/components/CasevacHlzPanel';
 import { type CasevacExportData } from '@/casevacExport';
@@ -93,6 +94,27 @@ export default function Map() {
             });
             hlzOverlay.on('click', () => openCasevacDrawer(casevac));
         }
+    }
+
+    function removeCasevacFromMap(uid: string) {
+        if (removeCasevacMapLayers(
+            uid,
+            markersLayer,
+            markers,
+            hlzLayer.current,
+            hlzOverlays.current,
+        )) {
+            setMarkers({...markers});
+        }
+
+        setSelectedCasevac(current => {
+            if (current?.uid !== uid) return current;
+            close();
+            setDrawerTitle('');
+            setDetailRows([]);
+            setPositionRows([]);
+            return null;
+        });
     }
 
     function formatDrawer(eud:any, point:any) {
@@ -355,25 +377,7 @@ export default function Map() {
 
             function onCaseEvacDelete(value: { uid?: string }) {
                 if (!value.uid) return;
-
-                if (removeCasevacMapLayers(
-                    value.uid,
-                    markersLayer,
-                    markers,
-                    hlzLayer.current,
-                    hlzOverlays.current,
-                )) {
-                    setMarkers({...markers});
-                }
-
-                setSelectedCasevac(current => {
-                    if (current?.uid !== value.uid) return current;
-                    close();
-                    setDrawerTitle('');
-                    setDetailRows([]);
-                    setPositionRows([]);
-                    return null;
-                });
+                removeCasevacFromMap(value.uid);
             }
 
             function onRBLine(value: any) {
@@ -562,7 +566,11 @@ export default function Map() {
                 {selectedCasevac && (
                     <>
                         <CasevacHlzPanel casevac={selectedCasevac} />
-                        <Group justify="flex-end" my="md">
+                        <Group justify="space-between" my="md" gap="sm">
+                            <CasevacDeleteButton
+                              casevac={selectedCasevac}
+                              onDeleted={removeCasevacFromMap}
+                            />
                             <CasevacExportMenu casevac={selectedCasevac} />
                         </Group>
                     </>
