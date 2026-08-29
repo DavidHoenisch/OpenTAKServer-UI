@@ -82,6 +82,12 @@ export default function CasevacHlzPanel({ casevac }: CasevacHlzPanelProps) {
           <HlzDetail icon={IconFlag} label="Marking" value={hlz.marking} />
           <HlzDetail icon={IconUser} label="Marked by" value={hlz.markedBy} />
           <HlzDetail icon={IconMessage} label="HLZ remarks" value={hlz.remarks} />
+          <HlzDetail
+            icon={IconMapPin}
+            label="Protected zone coordinate"
+            value={hlz.protectedCoordinate}
+            coordinate
+          />
         </SimpleGrid>
 
         <HlzDetail icon={IconAlertTriangle} label="Terrain / hazards" value={hlz.hazards} />

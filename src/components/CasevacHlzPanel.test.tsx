@@ -51,3 +51,24 @@ it('warns when ATAK sent a pickup point without additional HLZ details', () => {
   expect(screen.getByText(/ATAK sent no marker identity, remarks, obstacles/)).toBeInTheDocument();
   expect(screen.getByText(/Protection zone code: 0/)).toBeInTheDocument();
 });
+
+it('shows the protected-zone coordinate sent by current ATAK versions', () => {
+  render(
+    <CasevacHlzPanel
+      casevac={{
+        uid: 'casevac-3',
+        title: 'MED.29.133718',
+        timestamp: '2026-08-29T20:39:22Z',
+        hlz_marking: 3,
+        terrain_none: true,
+        zone_protected_coord: '10T\u200e EH\u200e 12345\u200e 67890',
+        zone_prot_marker: '47.610000,-122.330000,100,10,10,0',
+        point: { latitude: 47.6, longitude: -122.3 },
+      }}
+    />,
+  );
+
+  expect(screen.getByText('HLZ details supplied by ATAK')).toBeInTheDocument();
+  expect(screen.getByText('Protected zone coordinate')).toBeInTheDocument();
+  expect(screen.getByText('10T EH 12345 67890')).toBeInTheDocument();
+});

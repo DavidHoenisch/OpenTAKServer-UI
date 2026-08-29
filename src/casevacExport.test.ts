@@ -201,4 +201,25 @@ describe('CASEVAC 9-line export', () => {
       'ATAK explicitly reported no terrain hazards; HLZ marking was not provided',
     );
   });
+
+  it('treats ATAK protected-zone coordinates as supplied HLZ details', () => {
+    const protectedZoneCasevac: CasevacExportData = {
+      uid: 'protected-zone',
+      title: 'MED.29.133718',
+      timestamp: casevac.timestamp,
+      hlz_marking: 3,
+      terrain_none: true,
+      zone_protected_coord: '10T\u200e EH\u200e 12345\u200e 67890',
+      zone_prot_marker: '47.610000,-122.330000,100,10,10,0',
+      point: { latitude: 47.6, longitude: -122.3 },
+    };
+
+    const hlz = buildCasevacHlzSummary(protectedZoneCasevac);
+    const text = formatNineLineText(protectedZoneCasevac);
+
+    expect(hlz.sourceStatus).toBe('supplied');
+    expect(hlz.statusMessage).toBe('HLZ details supplied by ATAK');
+    expect(hlz.protectedCoordinate).toBe('10T EH 12345 67890');
+    expect(text).toContain('Protected zone coordinate: 10T EH 12345 67890');
+  });
 });
