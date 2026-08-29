@@ -8,6 +8,8 @@ import { DataTable, type DataTableSortStatus } from 'mantine-datatable';
 import { notifications } from '@mantine/notifications';
 import CasevacExportMenu from '@/components/CasevacExportMenu';
 import { buildCasevacHlzSummary, type CasevacExportData } from '@/casevacExport';
+import { removeCasevacFromList } from '@/casevacLiveSync';
+import { socket } from '@/socketio';
 
 interface Casevac extends CasevacExportData {
     delete_button: React.ReactNode;
@@ -95,6 +97,25 @@ export default function Casevac() {
         setPage(1);
         getCasevacs();
     }, [pageSize]);
+
+    useEffect(() => {
+        function onCasevacDelete(value: { uid?: string }) {
+            const uid = value.uid;
+            if (!uid) return;
+            setCasevacs(current => {
+                const next = removeCasevacFromList(current, uid);
+                if (next.length !== current.length) {
+                    setCasevacCount(count => Math.max(0, count - 1));
+                }
+                return next;
+            });
+        }
+
+        socket.on('casevac_delete', onCasevacDelete);
+        return () => {
+            socket.off('casevac_delete', onCasevacDelete);
+        };
+    }, []);
 
     return (
         <>

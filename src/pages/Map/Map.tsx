@@ -25,6 +25,7 @@ import CasevacExportMenu from '@/components/CasevacExportMenu';
 import CasevacHlzPanel from '@/components/CasevacHlzPanel';
 import { type CasevacExportData } from '@/casevacExport';
 import { buildCasevacHlzOverlay } from '@/casevacHlzOverlay';
+import { removeCasevacMapLayers } from '@/casevacLiveSync';
 
 export default function Map() {
     const [markers, setMarkers] = useState<{ [uid: string]: L.Marker }>({});
@@ -352,6 +353,29 @@ export default function Map() {
                 setMarkers(markers);
             }
 
+            function onCaseEvacDelete(value: { uid?: string }) {
+                if (!value.uid) return;
+
+                if (removeCasevacMapLayers(
+                    value.uid,
+                    markersLayer,
+                    markers,
+                    hlzLayer.current,
+                    hlzOverlays.current,
+                )) {
+                    setMarkers({...markers});
+                }
+
+                setSelectedCasevac(current => {
+                    if (current?.uid !== value.uid) return current;
+                    close();
+                    setDrawerTitle('');
+                    setDetailRows([]);
+                    setPositionRows([]);
+                    return null;
+                });
+            }
+
             function onRBLine(value: any) {
                 const { uid } = value;
                 if (Object.hasOwn(rbLines, uid)) {
@@ -499,6 +523,7 @@ export default function Map() {
             socket.on('marker', onMarker);
             socket.on('eud', onEud);
             socket.on('casevac', onCaseEvac);
+            socket.on('casevac_delete', onCaseEvacDelete);
 
             return () => {
                 socket.off('point', onPointEvent);
@@ -506,6 +531,7 @@ export default function Map() {
                 socket.off('marker', onMarker);
                 socket.off('eud', onEud);
                 socket.off('casevac', onCaseEvac);
+                socket.off('casevac_delete', onCaseEvacDelete);
 
                 // janky fix for duplicate fullscreen buttons
                 //const elementsToRemove =
