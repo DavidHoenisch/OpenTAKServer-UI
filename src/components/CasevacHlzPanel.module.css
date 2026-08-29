@@ -1,0 +1,35 @@
+.panel {
+  overflow: hidden;
+  border-color: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  background:
+    linear-gradient(135deg, rgb(23 76 105 / 7%), transparent 48%),
+    light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
+}
+
+.statusBar {
+  height: 4px;
+  background: var(--mantine-color-teal-7);
+}
+
+.statusBarMissing {
+  background: var(--mantine-color-orange-6);
+}
+
+.heading {
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.value {
+  line-height: 1.35;
+}
+
+.coordinate {
+  font-family: var(--mantine-font-family-monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  padding-top: var(--mantine-spacing-xs);
+  border-top: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}

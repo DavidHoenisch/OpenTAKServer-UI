@@ -76,9 +76,21 @@ export interface NineLineReport {
   };
 }
 
+export interface CasevacHlzSummary {
+  marking: string;
+  location: string;
+  markedBy: string;
+  remarks: string;
+  hazards: string;
+  sourceStatus: 'supplied' | 'explicit-none' | 'missing';
+  statusMessage: string;
+}
+
 type ExportFormat = 'txt' | 'pdf';
 
 const NOT_PROVIDED = 'Not provided';
+const HLZ_MARKING_NONE = 3;
+const PROTECTION_ZONE_DEFAULT = 0;
 const SECURITY_LABELS = [
   'N - No enemy troops in area',
   'P - Possible enemy troops in area; approach with caution',
@@ -95,6 +107,10 @@ const MARKING_LABELS = [
 
 function hasValue(value: unknown): boolean {
   return value !== null && value !== undefined && value !== '';
+}
+
+function hasSelectedProtectionZone(value: number | string | null | undefined): boolean {
+  return hasValue(value) && Number(value) !== PROTECTION_ZONE_DEFAULT;
 }
 
 function textValue(value: unknown): string {
@@ -118,6 +134,18 @@ function joinProvided(values: Array<string | null | undefined>): string {
   return provided.length > 0 ? provided.join('; ') : NOT_PROVIDED;
 }
 
+function formatPickupLocation(point: CasevacExportData['point']): string {
+  const latitude = point?.latitude;
+  const longitude = point?.longitude;
+
+  return typeof latitude === 'number' && typeof longitude === 'number'
+    ? joinProvided([
+        `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        typeof point?.hae === 'number' ? `HAE: ${point.hae} m` : null,
+      ])
+    : NOT_PROVIDED;
+}
+
 function countLine(entries: Array<[string, number | string | null | undefined]>): string {
   const provided = entries
     .filter(([, value]) => hasValue(value))
@@ -132,6 +160,17 @@ function formatZmistLines(zmist: NonNullable<NineLineReport['zmist']>): string[]
     `I - Injuries: ${zmist.injuries}`,
     `S - Signs / symptoms: ${zmist.signs}`,
     `T - Treatment: ${zmist.treatment}`,
+  ];
+}
+
+function formatHlzLines(hlz: CasevacHlzSummary): string[] {
+  return [
+    `Status: ${hlz.statusMessage}`,
+    `Location: ${hlz.location}`,
+    `Marking: ${hlz.marking}`,
+    `Marked by: ${hlz.markedBy}`,
+    `HLZ remarks: ${hlz.remarks}`,
+    `Terrain / hazards: ${hlz.hazards}`,
   ];
 }
 
@@ -173,16 +212,57 @@ function terrainLine(casevac: CasevacExportData): string {
   ]);
 }
 
+export function buildCasevacHlzSummary(casevac: CasevacExportData): CasevacHlzSummary {
+  const marking = codedValue(casevac.hlz_marking, MARKING_LABELS);
+  const hasTerrainDetails = Boolean(
+    casevac.terrain_slope ||
+    casevac.terrain_rough ||
+    casevac.terrain_loose ||
+    casevac.terrain_other ||
+    hasValue(casevac.terrain_slope_dir) ||
+    hasValue(casevac.terrain_other_detail) ||
+    hasValue(casevac.terrain_detail) ||
+    hasValue(casevac.obstacles) ||
+    hasValue(casevac.winds_are_from) ||
+    hasSelectedProtectionZone(casevac.zone_prot_selection),
+  );
+  const hasAdditionalDetails = Boolean(
+    (hasValue(casevac.hlz_marking) && Number(casevac.hlz_marking) !== HLZ_MARKING_NONE) ||
+    hasValue(casevac.marked_by) ||
+    hasValue(casevac.hlz_remarks) ||
+    hasTerrainDetails,
+  );
+  const markingReportedNone = Number(casevac.hlz_marking) === HLZ_MARKING_NONE;
+  const terrainReportedNone = casevac.terrain_none === true;
+  const explicitlyReportsNone = markingReportedNone || terrainReportedNone;
+  const sourceStatus = hasAdditionalDetails
+    ? 'supplied'
+    : explicitlyReportsNone
+      ? 'explicit-none'
+      : 'missing';
+  let statusMessage = 'HLZ details supplied by ATAK';
+  if (sourceStatus === 'missing') {
+    statusMessage = 'ATAK did not include HLZ details in this CASEVAC';
+  } else if (sourceStatus === 'explicit-none' && markingReportedNone && terrainReportedNone) {
+    statusMessage = 'ATAK explicitly reported no HLZ marking and no terrain hazards';
+  } else if (sourceStatus === 'explicit-none' && markingReportedNone) {
+    statusMessage = 'ATAK explicitly reported no HLZ marking; terrain hazards were not provided';
+  } else if (sourceStatus === 'explicit-none') {
+    statusMessage = 'ATAK explicitly reported no terrain hazards; HLZ marking was not provided';
+  }
+
+  return {
+    marking,
+    location: formatPickupLocation(casevac.point),
+    markedBy: textValue(casevac.marked_by),
+    remarks: textValue(casevac.hlz_remarks),
+    hazards: terrainLine(casevac),
+    sourceStatus,
+    statusMessage,
+  };
+}
+
 export function buildNineLineReport(casevac: CasevacExportData): NineLineReport {
-  const latitude = casevac.point?.latitude;
-  const longitude = casevac.point?.longitude;
-  const location =
-    typeof latitude === 'number' && typeof longitude === 'number'
-      ? joinProvided([
-          `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-          typeof casevac.point?.hae === 'number' ? `HAE: ${casevac.point.hae} m` : null,
-        ])
-      : NOT_PROVIDED;
   const callsign = casevac.eud?.callsign || casevac.callsign || '';
   const frequency = hasValue(casevac.freq) ? `${casevac.freq} MHz` : '';
   const security = codedValue(casevac.security, SECURITY_LABELS);
@@ -199,7 +279,7 @@ export function buildNineLineReport(casevac: CasevacExportData): NineLineReport 
     timestamp: casevac.timestamp,
     reportingCallsign: callsign || NOT_PROVIDED,
     lines: [
-      { number: 1, label: 'Pickup Location', value: location },
+      { number: 1, label: 'Pickup Location', value: formatPickupLocation(casevac.point) },
       {
         number: 2,
         label: 'Radio Frequency / Callsign',
@@ -265,6 +345,7 @@ export function buildNineLineReport(casevac: CasevacExportData): NineLineReport 
 
 export function formatNineLineText(casevac: CasevacExportData): string {
   const report = buildNineLineReport(casevac);
+  const hlz = buildCasevacHlzSummary(casevac);
   const sections = [
     '9-LINE MEDEVAC REQUEST',
     `Title: ${report.title}`,
@@ -277,6 +358,9 @@ export function formatNineLineText(casevac: CasevacExportData): string {
       line.value,
       '',
     ]),
+    'HLZ SITE SUPPLEMENT',
+    ...formatHlzLines(hlz),
+    '',
   ];
 
   if (report.remarks) {
@@ -318,6 +402,7 @@ export function getCasevacExportFilename(casevac: CasevacExportData, format: Exp
 export async function createNineLinePdf(casevac: CasevacExportData): Promise<ArrayBuffer> {
   const { jsPDF } = await import('jspdf');
   const report = buildNineLineReport(casevac);
+  const hlz = buildCasevacHlzSummary(casevac);
   const document = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
   const pageWidth = document.internal.pageSize.getWidth();
   const pageHeight = document.internal.pageSize.getHeight();
@@ -407,6 +492,8 @@ export async function createNineLinePdf(casevac: CasevacExportData): Promise<Arr
     document.text(wrapped, margin + 62, y + 34);
     y += height + 8;
   }
+
+  drawBlock('HLZ Site Supplement', formatHlzLines(hlz).join('\n'));
 
   if (report.remarks) {
     drawBlock('Remarks', report.remarks);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildCasevacHlzSummary,
   buildNineLineReport,
   createNineLinePdf,
   formatNineLineText,
@@ -64,6 +65,19 @@ const casevac: CasevacExportData = {
 };
 
 describe('CASEVAC 9-line export', () => {
+  it('builds an operational HLZ summary from the details supplied by ATAK', () => {
+    const hlz = buildCasevacHlzSummary(casevac);
+
+    expect(hlz.marking).toBe('C - Smoke');
+    expect(hlz.location).toBe('47.620500, -122.349300; HAE: 28 m');
+    expect(hlz.markedBy).toBe('Orange smoke');
+    expect(hlz.remarks).toBe('Marking on request only');
+    expect(hlz.hazards).toContain('Power lines south of pickup site');
+    expect(hlz.hazards).toContain('Winds from: W');
+    expect(hlz.sourceStatus).toBe('supplied');
+    expect(hlz.statusMessage).toBe('HLZ details supplied by ATAK');
+  });
+
   it('maps CASEVAC fields into all nine standard lines', () => {
     const report = buildNineLineReport(casevac);
 
@@ -96,6 +110,19 @@ describe('CASEVAC 9-line export', () => {
     expect(text).toContain('T - Treatment: Splinted and monitored');
   });
 
+  it('includes a complete HLZ supplement in the plain-text export', () => {
+    const text = formatNineLineText(casevac);
+
+    expect(text).toContain('HLZ SITE SUPPLEMENT');
+    expect(text).toContain('Status: HLZ details supplied by ATAK');
+    expect(text).toContain('Location: 47.620500, -122.349300; HAE: 28 m');
+    expect(text).toContain('Marking: C - Smoke');
+    expect(text).toContain('Marked by: Orange smoke');
+    expect(text).toContain('HLZ remarks: Marking on request only');
+    expect(text).toContain('Obstacles: Power lines south of pickup site');
+    expect(text).toContain('Winds from: W');
+  });
+
   it('uses stable, filesystem-safe filenames for either format', () => {
     expect(getCasevacExportFilename(casevac, 'txt')).toBe(
       'casevac-med-28-192604-20260829T173000Z.txt',
@@ -126,5 +153,52 @@ describe('CASEVAC 9-line export', () => {
     expect(report.lines[1].value).toBe('Not provided');
     expect(report.lines[5].value).toBe('Not provided');
     expect(report.lines[6].value).toBe('Not provided');
+  });
+
+  it('identifies the sparse HLZ payload observed in production without inventing details', () => {
+    const sparseCasevac: CasevacExportData = {
+      uid: '356b6e03-4123-428e-8850-033230f586c5',
+      title: 'MED.29.104217',
+      timestamp: '2026-08-29T17:42:17Z',
+      hlz_marking: 3,
+      terrain_none: true,
+      zone_prot_selection: 0,
+      point: { latitude: 47.6, longitude: -122.3 },
+    };
+
+    const hlz = buildCasevacHlzSummary(sparseCasevac);
+    const text = formatNineLineText(sparseCasevac);
+
+    expect(hlz.marking).toBe('D - None');
+    expect(hlz.sourceStatus).toBe('explicit-none');
+    expect(hlz.hazards).toBe('None reported; Protection zone code: 0');
+    expect(hlz.statusMessage).toBe(
+      'ATAK explicitly reported no HLZ marking and no terrain hazards',
+    );
+    expect(text).toContain(
+      'Status: ATAK explicitly reported no HLZ marking and no terrain hazards',
+    );
+  });
+
+  it('does not treat an omitted HLZ field as explicitly reported none', () => {
+    const markingOnly = buildCasevacHlzSummary({
+      uid: 'marking-only',
+      title: 'Marking only',
+      timestamp: casevac.timestamp,
+      hlz_marking: 3,
+    });
+    const terrainOnly = buildCasevacHlzSummary({
+      uid: 'terrain-only',
+      title: 'Terrain only',
+      timestamp: casevac.timestamp,
+      terrain_none: true,
+    });
+
+    expect(markingOnly.statusMessage).toBe(
+      'ATAK explicitly reported no HLZ marking; terrain hazards were not provided',
+    );
+    expect(terrainOnly.statusMessage).toBe(
+      'ATAK explicitly reported no terrain hazards; HLZ marking was not provided',
+    );
   });
 });

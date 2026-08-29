@@ -22,6 +22,7 @@ import { FullscreenControl } from "react-leaflet-fullscreen";
 import Arrow from './Arrow';
 import Video from './Video';
 import CasevacExportMenu from '@/components/CasevacExportMenu';
+import CasevacHlzPanel from '@/components/CasevacHlzPanel';
 import { type CasevacExportData } from '@/casevacExport';
 
 export default function Map() {
@@ -484,9 +485,12 @@ export default function Map() {
               shadow="xl"
             >
                 {selectedCasevac && (
-                    <Group justify="flex-end" mb="md">
-                        <CasevacExportMenu casevac={selectedCasevac} />
-                    </Group>
+                    <>
+                        <CasevacHlzPanel casevac={selectedCasevac} />
+                        <Group justify="flex-end" my="md">
+                            <CasevacExportMenu casevac={selectedCasevac} />
+                        </Group>
+                    </>
                 )}
                 <Divider label="Details" labelPosition="left" color={computedColorScheme === 'light' ? 'black' : 'gray.4'} />
                 <Table>
