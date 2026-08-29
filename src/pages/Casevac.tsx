@@ -6,48 +6,12 @@ import { apiRoutes } from '@/apiRoutes';
 import {t} from "i18next";
 import { DataTable, type DataTableSortStatus } from 'mantine-datatable';
 import { notifications } from '@mantine/notifications';
-import {type EUD} from "@/pages/EUDs.tsx";
+import CasevacExportMenu from '@/components/CasevacExportMenu';
+import { type CasevacExportData } from '@/casevacExport';
 
-interface Casevac {
-    uid: string;
-    title: string;
-    timestamp: string;
-    callsign: string;
-    casevac: boolean;
-    urgent: number;
-    priority: number;
-    routine: number;
-    hoist: boolean;
-    extraction_equipment: boolean;
-    ventilator: boolean;
-    equipment_detail: string;
-    litter: number;
-    ambulatory: number;
-    security: number;
-    hlz_marking: number;
-    hlz_remarks: string;
-    us_military: number;
-    us_civilian: number
-    nonus_military: number;
-    nonus_civilian: number;
-    epw: number;
-    child: number;
-    terrain_slope_dir: string;
-    terrain_rough: boolean;
-    terrain_loose: boolean;
-    terrain_other: boolean;
-    terrain_other_detail: string;
-    medline_remarks: string;
-    eud: EUD;
-    zmist: {
-        i: string;
-        m: string;
-        s: string;
-        t: string;
-        title: string;
-        z: string;
-    }
+interface Casevac extends CasevacExportData {
     delete_button: React.ReactNode;
+    export_button: React.ReactNode;
 }
 
 export default function Casevac() {
@@ -101,6 +65,7 @@ export default function Casevac() {
                         key={`${row.title}_delete`}
                         color="red"
                     ><IconCircleMinus size={14} /></Button>;
+                    row.export_button = <CasevacExportMenu casevac={row} compact />;
 
                     rows.push(row);
                 });
@@ -166,7 +131,8 @@ export default function Casevac() {
                         {accessor: "medline_remarks", title: t("Remarks"), sortable: true}, {accessor: "zmist.i", title: t("Injuries Sustained"), sortable: true},
                         {accessor: "zmist.m", title: t("Mechanism of Injury"), sortable: true}, {accessor: "zmist.s", title: t("Symptoms and Signs"), sortable: true},
                         {accessor: "zmist.t", title: t("Treatment Given"), sortable: true}, {accessor: "zmist.title", title: t("Title"), sortable: true},
-                        {accessor: "zmist.z", title: t("Zap Number"), sortable: true}, {accessor: "delete_button", title: t("Delete")}
+                        {accessor: "zmist.z", title: t("Zap Number"), sortable: true}, {accessor: "export_button", title: t("Export")},
+                        {accessor: "delete_button", title: t("Delete")}
                     ]}
                     page={activePage}
                     onPageChange={(p) => setPage(p)}
