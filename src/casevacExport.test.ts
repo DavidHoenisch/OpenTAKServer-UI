@@ -78,7 +78,8 @@ describe('CASEVAC 9-line export', () => {
     expect(report.lines[4].value).toBe('L - Litter: 4; A - Ambulatory: 3');
     expect(report.lines[5].value).toContain('P - Possible enemy troops in area');
     expect(report.lines[6].value).toContain('C - Smoke');
-    expect(report.lines[7].value).toContain('A - Coalition Military: 5');
+    expect(report.lines[7].value).toContain('A - US Military: 5');
+    expect(report.lines[7].value).toContain('C - Non-US Military: 1');
     expect(report.lines[8].value).toContain('Rough');
     expect(report.lines[8].value).toContain('Slope (NE)');
     expect(report.zmist?.mechanism).toBe('Fall from height');

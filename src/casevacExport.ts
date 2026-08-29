@@ -125,6 +125,16 @@ function countLine(entries: Array<[string, number | string | null | undefined]>)
   return provided.length > 0 ? provided.join('; ') : NOT_PROVIDED;
 }
 
+function formatZmistLines(zmist: NonNullable<NineLineReport['zmist']>): string[] {
+  return [
+    `Z - Zap number: ${zmist.zapNumber}`,
+    `M - Mechanism: ${zmist.mechanism}`,
+    `I - Injuries: ${zmist.injuries}`,
+    `S - Signs / symptoms: ${zmist.signs}`,
+    `T - Treatment: ${zmist.treatment}`,
+  ];
+}
+
 function equipmentLine(casevac: CasevacExportData): string {
   if (casevac.equipment_none) {
     return 'A - None';
@@ -229,12 +239,12 @@ export function buildNineLineReport(casevac: CasevacExportData): NineLineReport 
         number: 8,
         label: 'Patient Nationality / Status',
         value: countLine([
-          ['A - Coalition Military', casevac.us_military],
-          ['B - Coalition Civilian', casevac.us_civilian],
-          ['C - Non-Coalition Military', casevac.nonus_military],
-          ['D - Non-Coalition Civilian', casevac.nonus_civilian],
-          ['E - Opposing Force / Detainee', casevac.epw],
-          ['F - Children', casevac.child],
+          ['A - US Military', casevac.us_military],
+          ['B - US Civilian', casevac.us_civilian],
+          ['C - Non-US Military', casevac.nonus_military],
+          ['D - Non-US Civilian', casevac.nonus_civilian],
+          ['E - Enemy Prisoner of War', casevac.epw],
+          ['F - Child', casevac.child],
         ]),
       },
       { number: 9, label: 'Pickup Site / Hazards', value: terrainLine(casevac) },
@@ -273,15 +283,7 @@ export function formatNineLineText(casevac: CasevacExportData): string {
     sections.push('REMARKS', report.remarks, '');
   }
   if (report.zmist) {
-    sections.push(
-      `ZMIST - ${report.zmist.title}`,
-      `Z - Zap number: ${report.zmist.zapNumber}`,
-      `M - Mechanism: ${report.zmist.mechanism}`,
-      `I - Injuries: ${report.zmist.injuries}`,
-      `S - Signs / symptoms: ${report.zmist.signs}`,
-      `T - Treatment: ${report.zmist.treatment}`,
-      '',
-    );
+    sections.push(`ZMIST - ${report.zmist.title}`, ...formatZmistLines(report.zmist), '');
   }
 
   return `${sections.join('\n').trimEnd()}\n`;
@@ -410,16 +412,7 @@ export async function createNineLinePdf(casevac: CasevacExportData): Promise<Arr
     drawBlock('Remarks', report.remarks);
   }
   if (report.zmist) {
-    drawBlock(
-      `ZMIST - ${report.zmist.title}`,
-      [
-        `Z - Zap number: ${report.zmist.zapNumber}`,
-        `M - Mechanism: ${report.zmist.mechanism}`,
-        `I - Injuries: ${report.zmist.injuries}`,
-        `S - Signs / symptoms: ${report.zmist.signs}`,
-        `T - Treatment: ${report.zmist.treatment}`,
-      ].join('\n'),
-    );
+    drawBlock(`ZMIST - ${report.zmist.title}`, formatZmistLines(report.zmist).join('\n'));
   }
 
   const pageCount = document.getNumberOfPages();

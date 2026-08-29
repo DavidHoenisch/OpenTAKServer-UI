@@ -262,7 +262,12 @@ export default function Map() {
 
             function onCaseEvac(value: any) {
                 const { uid } = value;
-                const marker = L.marker([value.point.latitude, value.point.longitude]);
+                let marker = L.marker([value.point.latitude, value.point.longitude]);
+                if (Object.hasOwn(markers, uid)) {
+                    marker = markers[uid];
+                    marker.off('click');
+                }
+
                 marker.bindTooltip(value.title, {
                     opacity: 0.7,
                     permanent: true,
@@ -287,7 +292,7 @@ export default function Map() {
 
                 if (Object.hasOwn(markers, uid)) {
                     // @ts-expect-error trust me bro
-                    markers[uid].slideTo([value.point.latitude, value.point.longitude],
+                    marker.slideTo([value.point.latitude, value.point.longitude],
                         { duration: 2000, keepAtCenter: false });
                 } else {
                     marker.addTo(markersLayer);
