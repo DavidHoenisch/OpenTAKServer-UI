@@ -262,6 +262,7 @@ export default function Map() {
 
             function onCaseEvac(value: any) {
                 const { uid } = value;
+                setSelectedCasevac((current) => current?.uid === uid ? value : current);
                 let marker = L.marker([value.point.latitude, value.point.longitude]);
                 if (Object.hasOwn(markers, uid)) {
                     marker = markers[uid];
