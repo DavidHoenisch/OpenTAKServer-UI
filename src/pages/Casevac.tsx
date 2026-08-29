@@ -135,6 +135,7 @@ export default function Casevac() {
                         {accessor: "terrain_loose", title: t("Loose Terrain"), sortable: true}, {accessor: "terrain_other_detail", title: t("Terrain Remarks"), sortable: true},
                         {accessor: "terrain_detail", title: t("Terrain Detail"), sortable: true}, {accessor: "obstacles", title: t("Obstacles"), sortable: true},
                         {accessor: "winds_are_from", title: t("Winds From"), sortable: true}, {accessor: "zone_prot_selection", title: t("Protection Zone"), sortable: true},
+                        {accessor: "zone_protected_coord", title: t("Protected Zone Coordinate"), sortable: true},
                         {accessor: "medline_remarks", title: t("Remarks"), sortable: true}, {accessor: "zmist.i", title: t("Injuries Sustained"), sortable: true},
                         {accessor: "zmist.m", title: t("Mechanism of Injury"), sortable: true}, {accessor: "zmist.s", title: t("Symptoms and Signs"), sortable: true},
                         {accessor: "zmist.t", title: t("Treatment Given"), sortable: true}, {accessor: "zmist.title", title: t("Title"), sortable: true},

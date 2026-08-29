@@ -60,4 +60,35 @@ describe('CASEVAC HLZ map overlay', () => {
       dashArray: '4 4',
     });
   });
+
+  it('places the overlay at ATAK protected-zone marker coordinates when supplied', () => {
+    expect(buildCasevacHlzOverlay({
+      uid: 'casevac-5',
+      title: 'MED.29.133718',
+      timestamp: '2026-08-29T20:39:22Z',
+      point: { latitude: 47.6, longitude: -122.3 },
+      hlz_marking: 3,
+      terrain_none: true,
+      zone_protected_coord: '10T EH 12345 67890',
+      zone_prot_marker: '47.610000,-122.330000,100,10,10,0',
+    })).toMatchObject({
+      position: [47.61, -122.33],
+      status: 'supplied',
+      color: '#2f9e44',
+      dashArray: undefined,
+    });
+  });
+
+  it('falls back to the pickup point when the protected-zone marker is descriptive text', () => {
+    expect(buildCasevacHlzOverlay({
+      uid: 'casevac-6',
+      title: 'MED.29.140000',
+      timestamp: '2026-08-29T21:00:00Z',
+      point: { latitude: 47.6, longitude: -122.3 },
+      zone_prot_marker: 'Green smoke',
+    })).toMatchObject({
+      position: [47.6, -122.3],
+      status: 'supplied',
+    });
+  });
 });

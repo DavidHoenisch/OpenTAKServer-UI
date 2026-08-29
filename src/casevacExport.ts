@@ -39,6 +39,8 @@ export interface CasevacExportData {
   obstacles?: string | null;
   winds_are_from?: string | null;
   zone_prot_selection?: number | string | null;
+  zone_protected_coord?: string | null;
+  zone_prot_marker?: string | null;
   medline_remarks?: string | null;
   freq?: number | string | null;
   friendlies?: string | null;
@@ -81,6 +83,7 @@ export interface CasevacHlzSummary {
   location: string;
   markedBy: string;
   remarks: string;
+  protectedCoordinate: string;
   hazards: string;
   sourceStatus: 'supplied' | 'explicit-none' | 'missing';
   statusMessage: string;
@@ -170,6 +173,7 @@ function formatHlzLines(hlz: CasevacHlzSummary): string[] {
     `Marking: ${hlz.marking}`,
     `Marked by: ${hlz.markedBy}`,
     `HLZ remarks: ${hlz.remarks}`,
+    `Protected zone coordinate: ${hlz.protectedCoordinate}`,
     `Terrain / hazards: ${hlz.hazards}`,
   ];
 }
@@ -209,7 +213,18 @@ function terrainLine(casevac: CasevacExportData): string {
     hasValue(casevac.zone_prot_selection)
       ? `Protection zone code: ${casevac.zone_prot_selection}`
       : null,
+    hasValue(casevac.zone_protected_coord)
+      ? `Protected zone coordinate: ${normalizeProtectedCoordinate(casevac.zone_protected_coord)}`
+      : null,
   ]);
+}
+
+function normalizeProtectedCoordinate(value: string | null | undefined): string {
+  return hasValue(value)
+    ? String(value)
+        .replace(/[\u200e\u200f\u202a-\u202e]/g, '')
+        .trim()
+    : NOT_PROVIDED;
 }
 
 export function buildCasevacHlzSummary(casevac: CasevacExportData): CasevacHlzSummary {
@@ -230,6 +245,8 @@ export function buildCasevacHlzSummary(casevac: CasevacExportData): CasevacHlzSu
     (hasValue(casevac.hlz_marking) && Number(casevac.hlz_marking) !== HLZ_MARKING_NONE) ||
     hasValue(casevac.marked_by) ||
     hasValue(casevac.hlz_remarks) ||
+    hasValue(casevac.zone_protected_coord) ||
+    hasValue(casevac.zone_prot_marker) ||
     hasTerrainDetails,
   );
   const markingReportedNone = Number(casevac.hlz_marking) === HLZ_MARKING_NONE;
@@ -256,6 +273,7 @@ export function buildCasevacHlzSummary(casevac: CasevacExportData): CasevacHlzSu
     location: formatPickupLocation(casevac.point),
     markedBy: textValue(casevac.marked_by),
     remarks: textValue(casevac.hlz_remarks),
+    protectedCoordinate: normalizeProtectedCoordinate(casevac.zone_protected_coord),
     hazards: terrainLine(casevac),
     sourceStatus,
     statusMessage,
